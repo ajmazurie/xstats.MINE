@@ -103,7 +103,7 @@ def analyze_pair (x, y, cv = 0.0, exp = 0.6, c = 15, missing_value = None):
 	result = dataset.getResult(
 		Result, # BriefResult class
 		0, 1, # first and second variables in the dataset
-		cv, exp, c, # MINE parameters
+		float(cv), float(exp), float(c), # MINE parameters
 		0, _null_buffered_writer # debug level, debug stream
 	)
 
