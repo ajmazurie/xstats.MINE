@@ -78,7 +78,11 @@ def analyze_pair (x, y, cv = 0.0, exp = 0.6, c = 15, missing_value = None):
 
 	Notes:
 		- the two input vectors must be of equal length
-		- missing values in either x or y must be reported as None values
+		- missing values in either x or y must be reported as missing_value values
+
+	See: D. Reshef, Y. Reshef, H. Finucane, S. Grossman, G. McVean, P. Turnbaugh,
+	E. Lander, M. Mitzenmacher, P. Sabeti. Detecting novel associations in large
+	datasets. Science 334, 6062 (2011).
 	"""
 	if (len(x) != len(y)):
 		raise ValueError("The two vectors must be of equal length")
@@ -89,32 +93,15 @@ def analyze_pair (x, y, cv = 0.0, exp = 0.6, c = 15, missing_value = None):
 
 	if (is_jython):
 		xy = (x, y)
-		result_class = Result
 	else:
 		xy = jpype.JArray(jpype.JFloat, 2)((x, y))
-
-		print dir(Result)
-		for i in (Result.__class__, Result.__javaclass__, Result.__metaclass__):
-			print i, dir(i)
-
-		result_class = Result.__javaclass__
 
 	_silence_output()
 
 	dataset = Dataset(xy, 0, _null_buffered_writer)
 
-	"""
-	for c in (Result, Result.__javaclass__, Result.__class__, Result.__metaclass__):
-		print dataset.getResult(
-			result_class, # BriefResult class
-			0, 1, # first and second variables in the dataset
-			cv, exp, c, # MINE parameters
-			0, _null_buffered_writer # debug level, debug stream
-		).toString()
-	"""
-
 	result = dataset.getResult(
-		result_class, # BriefResult class
+		Result, # BriefResult class
 		0, 1, # first and second variables in the dataset
 		cv, exp, c, # MINE parameters
 		0, _null_buffered_writer # debug level, debug stream
@@ -145,13 +132,24 @@ ADJACENT_PAIRS = 2
 def analyze_file (fn,
 	method = None, master_variable = None,
 	permute_data = False,
-	required_common_vals_fraction = 0.0,
-	max_num_boxes_exponent = 0.6,
-	num_clumps_factor = 15):
+	cv = 0.0, exp = 0.6, c = 15):
 	""" Execute MINE on a comma- or tab-delimited file
 
 	Arguments:
-		- *fn* name of the input file (mandatory)
+		- *fn* name of the input file
+		- **method** name of the analyze method; either MASTER_VARIABLE,
+			ALL_PAIRS or ADJACENT_PAIRS (see MINE documentation)
+		- **master_variable** index of the master variable; only considered
+			if **method** is set to MASTER_VARIABLE
+		- **permute_data**
+		- **cv** from MINE: 'floating point number indicating which percentage of
+			the records need to have data in them for both variables before those
+			two variables are compared'; i.e., the minimum percent overlap between
+			the two input vectors after discounting missing values (default: 0.0)
+		- **exp** from MINE: 'exponent of the equation B(n) = n^alpha' (default: 0.6)
+		- **c** from MINE: 'determine by what factor clumps may outnumber columns
+			when OptimizeXAxis is called. When trying to partition the x-axis into
+			x columns, the algorithm will start with at most cx clumps' (default: 15)
 
 	See: D. Reshef, Y. Reshef, H. Finucane, S. Grossman, G. McVean, P. Turnbaugh,
 	E. Lander, M. Mitzenmacher, P. Sabeti. Detecting novel associations in large
@@ -185,9 +183,7 @@ def analyze_file (fn,
 
 	results = analysis.getSortedResults(
 		Result, fn,
-		required_common_vals_fraction,
-		max_num_boxes_exponent,
-		num_clumps_factor,
+		cv, exp, c,
 		sys.maxint, # gcWait
 		"dummy", # jobID
 		0, _null_buffered_writer # debug level, debug stream
