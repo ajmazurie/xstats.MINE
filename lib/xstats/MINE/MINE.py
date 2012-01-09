@@ -1,6 +1,6 @@
 
 from . import python_implementation
-import sys, os
+import sys, os, csv, tempfile
 
 is_jython = (python_implementation() == "JYTHON")
 
@@ -133,23 +133,30 @@ def analyze_file (fn,
 	method = None, master_variable = None,
 	permute_data = False,
 	cv = 0.0, exp = 0.6, c = 15):
-	""" Execute MINE on a comma- or tab-delimited file
+	""" Calculate MINE statistics on a comma- or tab-delimited file
 
 	Arguments:
-		- *fn* name of the input file
-		- **method** name of the analyze method; either MASTER_VARIABLE,
-			ALL_PAIRS or ADJACENT_PAIRS (see MINE documentation)
+		- **fn** name of the input file; must have a .csv or .txt extension to
+			distinguish between comma- or tab-delimited format, respectively
+		- **method** determine which variable MINE will compare to each other;
+			either MASTER_VARIABLE (compare all variables against one master
+			variable), ALL_PAIRS (compare all pairs of variables against each
+			other), or ADJACENT_PAIRS (compare consecutive pairs of variables)
 		- **master_variable** index of the master variable; only considered
 			if **method** is set to MASTER_VARIABLE
-		- **permute_data**
-		- **cv** from MINE: 'floating point number indicating which percentage of
+		- **permute_data** (from MINE:) "instructs MINE to permute the dataset
+			before running it. If **method** is set to ADJACENT_PAIRS, then every
+			other variable will be permuted. If it is set to MASTER_VARIABLE, all
+			variables except for the master variable will be permuted. It cannot
+			be set with ALL_PAIRS" (default: False)
+		- **cv** (from MINE:) "floating point number indicating which percentage of
 			the records need to have data in them for both variables before those
-			two variables are compared'; i.e., the minimum percent overlap between
+			two variables are compared"; i.e., the minimum percent overlap between
 			the two input vectors after discounting missing values (default: 0.0)
-		- **exp** from MINE: 'exponent of the equation B(n) = n^alpha' (default: 0.6)
-		- **c** from MINE: 'determine by what factor clumps may outnumber columns
+		- **exp** (from MINE:) "exponent of the equation B(n) = n^alpha" (default: 0.6)
+		- **c** (from MINE:) "determine by what factor clumps may outnumber columns
 			when OptimizeXAxis is called. When trying to partition the x-axis into
-			x columns, the algorithm will start with at most cx clumps' (default: 15)
+			x columns, the algorithm will start with at most cx clumps" (default: 15)
 
 	See: D. Reshef, Y. Reshef, H. Finucane, S. Grossman, G. McVean, P. Turnbaugh,
 	E. Lander, M. Mitzenmacher, P. Sabeti. Detecting novel associations in large
@@ -168,9 +175,12 @@ def analyze_file (fn,
 	if (method == MASTER_VARIABLE) and (master_variable is None):
 		raise ValueError("A master variable must be provided when using the MASTER_VARIABLE method")
 
+	if (permute_data) and (method == ALL_PAIRS):
+		raise ValueError("permute_data cannot be used with the ALL_PAIRS method")
+
 	_silence_output()
 
-	dataset = Dataset(fn, 0, None)
+	dataset = Dataset(fn, 0, _null_buffered_writer)
 
 	if (method == ALL_PAIRS):
 		analysis = Analysis(dataset, Analysis.AnalysisStyle.allPairs)
@@ -179,16 +189,45 @@ def analyze_file (fn,
 		analysis = Analysis(dataset, Analysis.AnalysisStyle.adjacentPairs)
 
 	elif (method == MASTER_VARIABLE):
-		analysis = Analysis(dataset, master_variable)
+		analysis = Analysis(dataset, int(master_variable))
+
+	if (permute_data):
+		if (method == ADJACENT_PAIRS):
+			for v in range(0, dataset.numVariables() / 2):
+				dataset.permuteVariable(2 * v)
+
+		elif (method == MASTER_VARIABLE):
+			for v in range(0, dataset.numVariables()):
+				if (v != dataset.getMasterVariableId()):
+					dataset.permuteVariable(v)
+
+	fn = tempfile.NamedTemporaryFile('w')
 
 	results = analysis.getSortedResults(
-		Result, fn,
-		cv, exp, c,
-		sys.maxint, # gcWait
+		Result, fn.name,
+		float(cv), float(exp), float(c), # MINE parameters
+		2147483647, # gcWait
 		"dummy", # jobID
 		0, _null_buffered_writer # debug level, debug stream
 	)
 
 	_restore_output()
 
-	Analyze.printResults(results, fn, "dummy")
+	fn = tempfile.NamedTemporaryFile('w', delete = False)
+	fn_ = fn.name + ",dummy,Results.csv"
+
+	Analyze.printResults(results, fn.name, "dummy")
+
+	fn.close()
+
+	for entry in csv.DictReader(open(fn_, 'rU')):
+		yield entry["X var"], entry["Y var"], {
+			"MIC": float(entry["MIC (strength)"]),
+			"non_linearity": float(entry["MIC-p^2 (nonlinearity)"]),
+			"MAS": float(entry["MAS (non-monotonicity)"]),
+			"MEV": float(entry["MEV (functionality)"]),
+			"MCN": float(entry["MCN (complexity)"]),
+			"pearson": float(entry["Linear regression (p)"])
+		}
+
+	os.unlink(fn.name)
