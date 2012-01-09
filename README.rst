@@ -39,6 +39,8 @@ Finally, to install **xstats.MINE** itself please follow those steps:
 - Unzip the downloaded file, and ``cd`` in the resulting directory
 - Run ``python setup.py install``
 
+Note that **xstats.MINE** has been tested with the version 1.0.1b of **MINE.jar**; previous versions would fail.
+
 Examples
 --------
 
@@ -77,8 +79,8 @@ For example, analyzing the **Spellman.csv** file which can be found at http://ww
 
 	import xstats.MINE
 
-	for variable_a, variable_b, scores in xstats.MINE.analyze_file("Spellman.csv", xstats.MINE.MASTER_VARIABLE, 0, cv = 0.7):
-		print variable_a, variable_b, scores
+	for a, b, scores in xstats.MINE.analyze_file("Spellman.csv", xstats.MINE.MASTER_VARIABLE, 0, cv = 0.7):
+		print a, b, scores
 
 will display the following (only the first lines are shown; lines are truncated)::
 

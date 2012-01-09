@@ -241,6 +241,8 @@ def analyze_file (fn,
 	while (not analysis.varPairQueue().isEmpty()):
 		analysis.analyzePairs(Result, parameters, 100)
 
+	_restore_output()
+
 	keys = ("MIC", "non_linearity", "MAS", "MEV", "MCN", "pearson")
 
 	# replicate behavior of main.Analyze.printResults()
