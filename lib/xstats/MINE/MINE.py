@@ -1,4 +1,6 @@
 
+__MINE_VERSION = "1.0.1b" # last version or MINE.jar against which xstats.MINE has been tested
+
 from . import python_implementation
 import sys, os, csv, tempfile
 
@@ -9,10 +11,22 @@ if (is_jython):
 	import java
 
 	# access to MINE packages
-	import data.Dataset as Dataset
-	import analysis.Analysis as Analysis
-	import main.BriefResult as Result
-	import main.Analyze as Analyze
+	try:
+		import main.styles.AllPairsAnalysisStyle as AllPairsAnalysisStyle
+		import analysis.Analysis as Analysis
+		import analysis.AnalysisParameters as AnalysisParameters
+		import main.Analyze as Analyze
+		import main.styles.ConsecutivePairsAnalysisStyle as ConsecutivePairsAnalysisStyle
+		import data.Dataset as Dataset
+		import main.styles.MasterVariableAnalysisStyle as MasterVariableAnalysisStyle
+		import mine.core.MineParameters as MineParameters
+		import analysis.results.BriefResult as Result
+		import data.VarPairData as VarPairData
+		import analysis.VarPairQueue as VarPairQueue
+
+	except:
+		print >>sys.stderr, "ERROR: unable to load MINE.jar classes"
+		sys.exit(1)
 
 	# hook for stdout
 	class null_output_stream (java.io.OutputStream):
@@ -30,10 +44,41 @@ else:
 	java = jpype.java
 
 	# access to MINE packages
-	Dataset = jpype.JClass("data.Dataset")
-	Analysis = jpype.JClass("analysis.Analysis")
-	Result = jpype.JClass("main.BriefResult")
-	Analyze = jpype.JClass("main.Analyze")
+	try:
+		AllPairsAnalysisStyle = jpype.JClass("main.styles.AllPairsAnalysisStyle")
+		Analysis = jpype.JClass("analysis.Analysis")
+		AnalysisParameters = jpype.JClass("analysis.AnalysisParameters")
+		Analyze = jpype.JClass("main.Analyze")
+		ConsecutivePairsAnalysisStyle = jpype.JClass("main.styles.ConsecutivePairsAnalysisStyle")
+		Dataset = jpype.JClass("data.Dataset")
+		MasterVariableAnalysisStyle = jpype.JClass("main.styles.MasterVariableAnalysisStyle")
+		MineParameters = jpype.JClass("mine.core.MineParameters")
+		Result = jpype.JClass("analysis.results.BriefResult")
+		VarPairData = jpype.JClass("data.VarPairData")
+		VarPairQueue = jpype.JClass("analysis.VarPairQueue")
+
+	except:
+		print >>sys.stderr, "ERROR: unable to load MINE.jar classes"
+		sys.exit(1)
+
+	# test the MINE.jar version
+	from pkg_resources import parse_version
+
+	try:
+		mine_version = Analyze.versionDescription().split(' ')[-1]
+	except:
+		print >>sys.stderr, "ERROR: unable to determine the MINE.jar version"
+		sys.exit(1)
+
+	mine_version_ = parse_version(mine_version)
+	tested_version_ = parse_version(__MINE_VERSION)
+
+	if (mine_version_ < tested_version_):
+		print >>sys.stderr, "ERROR: xstats.MINE requires MINE.jar version %s or above (current version is %s)" % (__MINE_VERSION, mine_version)
+		sys.exit(1)
+
+	if (mine_version_ > tested_version_):
+		print >>sys.stderr, "WARNING: xstats.MINE has not been tested on MINE.jar version %s" % mine_version
 
 	# hook for stdout
 	_null_output_stream = jpype.JClass("org.apache.commons.io.output.NullOutputStream")()
@@ -54,20 +99,16 @@ NaN = float("NaN")
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-def analyze_pair (x, y, cv = 0.0, exp = 0.6, c = 15, missing_value = None):
+def analyze_pair (x, y, exp = 0.6, c = 15, missing_value = None):
 	""" Calculate various MINE statistics on a relationship between two scalar vectors
 
 	Arguments:
 		- **x** first vector
 		- **y** second vector
-		- **cv** from MINE: 'floating point number indicating which percentage of
-			the records need to have data in them for both variables before those
-			two variables are compared'; i.e., the minimum percent overlap between
-			the two input vectors after discounting missing values (default: 0.0)
-		- **exp** from MINE: 'exponent of the equation B(n) = n^alpha' (default: 0.6)
-		- **c** from MINE: 'determine by what factor clumps may outnumber columns
+		- **exp** (from MINE:) "exponent of the equation B(n) = n^alpha" (default: 0.6)
+		- **c** (from MINE:) "determine by what factor clumps may outnumber columns
 			when OptimizeXAxis is called. When trying to partition the x-axis into
-			x columns, the algorithm will start with at most cx clumps' (default: 15)
+			x columns, the algorithm will start with at most cx clumps" (default: 15)
 		- **missing_value** value to be considered missing value in x and y (default: None)
 
 	Return:
@@ -91,21 +132,20 @@ def analyze_pair (x, y, cv = 0.0, exp = 0.6, c = 15, missing_value = None):
 	x = [NaN if (item == missing_value) else item for item in x]
 	y = [NaN if (item == missing_value) else item for item in y]
 
-	if (is_jython):
-		xy = (x, y)
-	else:
-		xy = jpype.JArray(jpype.JFloat, 2)((x, y))
+	if (not is_jython):
+		x = jpype.JArray(jpype.JFloat, 1)(x)
+		y = jpype.JArray(jpype.JFloat, 1)(y)
 
 	_silence_output()
 
-	dataset = Dataset(xy, 0, _null_buffered_writer)
+	dataset = VarPairData(x, y)
 
-	result = dataset.getResult(
-		Result, # BriefResult class
-		0, 1, # first and second variables in the dataset
-		float(cv), float(exp), float(c), # MINE parameters
+	parameters = MineParameters(
+		float(exp), float(c),
 		0, _null_buffered_writer # debug level, debug stream
 	)
+
+	result = Analysis.getResult(Result, dataset, parameters)
 
 	_restore_output()
 
@@ -114,9 +154,7 @@ def analyze_pair (x, y, cv = 0.0, exp = 0.6, c = 15, missing_value = None):
 
 	result_ = {}
 	for key, value in zip(keys, values):
-		if (value == ''):
-			value = None
-		elif (value == "ERROR"):
+		if (value == '') or (value == "ERROR"):
 			value = None
 		else:
 			value = float(value)
@@ -130,8 +168,8 @@ ALL_PAIRS = 1
 ADJACENT_PAIRS = 2
 
 def analyze_file (fn,
-	method = None, master_variable = None,
-	permute_data = False,
+	method = None,
+	master_variable = None,
 	cv = 0.0, exp = 0.6, c = 15):
 	""" Calculate MINE statistics on a comma- or tab-delimited file
 
@@ -144,11 +182,6 @@ def analyze_file (fn,
 			other), or ADJACENT_PAIRS (compare consecutive pairs of variables)
 		- **master_variable** index of the master variable; only considered
 			if **method** is set to MASTER_VARIABLE
-		- **permute_data** (from MINE:) "instructs MINE to permute the dataset
-			before running it. If **method** is set to ADJACENT_PAIRS, then every
-			other variable will be permuted. If it is set to MASTER_VARIABLE, all
-			variables except for the master variable will be permuted. It cannot
-			be set with ALL_PAIRS" (default: False)
 		- **cv** (from MINE:) "floating point number indicating which percentage of
 			the records need to have data in them for both variables before those
 			two variables are compared"; i.e., the minimum percent overlap between
@@ -178,56 +211,52 @@ def analyze_file (fn,
 	if (permute_data) and (method == ALL_PAIRS):
 		raise ValueError("permute_data cannot be used with the ALL_PAIRS method")
 
-	_silence_output()
-
-	dataset = Dataset(fn, 0, _null_buffered_writer)
-
-	if (method == ALL_PAIRS):
-		analysis = Analysis(dataset, Analysis.AnalysisStyle.allPairs)
-
-	elif (method == ADJACENT_PAIRS):
-		analysis = Analysis(dataset, Analysis.AnalysisStyle.adjacentPairs)
-
-	elif (method == MASTER_VARIABLE):
-		analysis = Analysis(dataset, int(master_variable))
-
-	if (permute_data):
-		if (method == ADJACENT_PAIRS):
-			for v in range(0, dataset.numVariables() / 2):
-				dataset.permuteVariable(2 * v)
-
-		elif (method == MASTER_VARIABLE):
-			for v in range(0, dataset.numVariables()):
-				if (v != dataset.getMasterVariableId()):
-					dataset.permuteVariable(v)
-
-	fn = tempfile.NamedTemporaryFile('w')
-
-	results = analysis.getSortedResults(
-		Result, fn.name,
-		float(cv), float(exp), float(c), # MINE parameters
-		2147483647, # gcWait
-		"dummy", # jobID
-		0, _null_buffered_writer # debug level, debug stream
+	parameters = AnalysisParameters(
+		MineParameters(
+			float(exp), float(c),
+			0, _null_buffered_writer # debug level, debug stream
+		),
+		float(cv),
+		2147483647 # gcWait
 	)
 
-	_restore_output()
+	_silence_output()
 
-	fn = tempfile.NamedTemporaryFile('w', delete = False)
-	fn_ = fn.name + ",dummy,Results.csv"
+	# replicate behavior of main.Analyze.runAnalysis()
+	dataset = Dataset(fn, 0)
+	pair_queue = VarPairQueue(dataset)
 
-	Analyze.printResults(results, fn.name, "dummy")
+	if (method == ALL_PAIRS):
+		analysis_style = AllPairsAnalysisStyle()
 
-	fn.close()
+	elif (method == ADJACENT_PAIRS):
+		analysis_style = ConsecutivePairsAnalysisStyle()
 
-	for entry in csv.DictReader(open(fn_, 'rU')):
-		yield entry["X var"], entry["Y var"], {
-			"MIC": float(entry["MIC (strength)"]),
-			"non_linearity": float(entry["MIC-p^2 (nonlinearity)"]),
-			"MAS": float(entry["MAS (non-monotonicity)"]),
-			"MEV": float(entry["MEV (functionality)"]),
-			"MCN": float(entry["MCN (complexity)"]),
-			"pearson": float(entry["Linear regression (p)"])
-		}
+	elif (method == MASTER_VARIABLE):
+		analysis_style = MasterVariableAnalysisStyle(int(master_variable))
 
-	os.unlink(fn.name)
+	analysis_style.addVarPairsTo(pair_queue, dataset.numVariables())
+	analysis = Analysis(dataset, pair_queue)
+
+	while (not analysis.varPairQueue().isEmpty()):
+		analysis.analyzePairs(Result, parameters, 100)
+
+	keys = ("MIC", "non_linearity", "MAS", "MEV", "MCN", "pearson")
+
+	# replicate behavior of main.Analyze.printResults()
+	for entry in analysis.getSortedResults():
+		if (not entry.worthMentioning()):
+			continue
+
+		values = entry.toString().split(',')
+
+		result = {}
+		for key, value in zip(keys, values[2:]):
+			if (value == '') or (value == "ERROR"):
+				value = None
+			else:
+				value = float(value)
+
+			result[key] = value
+
+		yield values[0], values[1], result
