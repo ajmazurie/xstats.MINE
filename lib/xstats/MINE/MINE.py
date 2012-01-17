@@ -1,5 +1,5 @@
 
-__MINE_VERSION = "1.0.1b" # last version or MINE.jar against which xstats.MINE has been tested
+__MINE_VERSION = "1.0.1d" # last version or MINE.jar against which xstats.MINE has been tested
 
 from . import python_implementation
 import sys, os, csv, tempfile
@@ -207,9 +207,6 @@ def analyze_file (fn,
 
 	if (method == MASTER_VARIABLE) and (master_variable is None):
 		raise ValueError("A master variable must be provided when using the MASTER_VARIABLE method")
-
-	if (permute_data) and (method == ALL_PAIRS):
-		raise ValueError("permute_data cannot be used with the ALL_PAIRS method")
 
 	parameters = AnalysisParameters(
 		MineParameters(

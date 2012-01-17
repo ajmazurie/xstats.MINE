@@ -21,34 +21,39 @@ A complete description of MINE and examples of use can be found in the following
 Installation
 ------------
 
-For use with Jython
-~~~~~~~~~~~~~~~~~~~
+Please follow those steps to ensure a proper installation of ``xstats.MINE``:
 
-If you plan to use **xstats.MINE** with the Jython interpreter you need to ensure the **MINE.jar** file (which you can retrieve at http://www.exploredata.net/Downloads/MINE-Application) is visible from Jython. For example, ::
+1. Retrieval of MINE.jar
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-	jython -Dpython.path=MINE.jar my_script.py
+The file **MINE.jar**, which you can retrieve at http://www.exploredata.net/Downloads/MINE-Application must be present in your computer. It is advised to place the file in a stable location; e.g., a directory on your computer dedicated to Java `.jar files <http://en.wikipedia.org/wiki/JAR_(file_format)>`_.
 
-will execute your script **my_script.py** with Jython while loading the **MINE.jar** file located in the current directory.
+Please note that this version of ``xstats.MINE`` is compatible with ``MINE.jar`` version 1.0.1b through 1.0.1d.
 
-For use with Python
-~~~~~~~~~~~~~~~~~~~
+2. Installation of MINE.jar
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you plan to use **xstats.MINE** with the Python interpreter you need to install the JPype library first. An easy way to do so, if you have **setuptools** installed, is to type ::
+Once downloaded, **MINE.jar** must be made visible from the Java interpreter that lies behind Jython and JPype. It typically means adding the path to this file (wherever you placed it) to the ``CLASSPATH`` environment variable. If you are not familiar with the concept of environment variable, a quick introduction is available `here <http://docs.oracle.com/javase/tutorial/essential/environment/paths.html>`_.
+
+Depending of if you are under Windows or a flavor of Unix the technique to modify the ``CLASSPATH`` slightly differs. A good tutorial is available `here <http://docs.oracle.com/javase/tutorial/essential/environment/paths.html>`_; simply change references to ``PATH`` by references to ``CLASSPATH``.
+
+3. Installation of xstats.MINE
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you plan to use ``xstats.MINE`` with Python you need to have JPype installed first. An easy way to do so, if you have **setuptools** installed, is to type ::
 
 	easy_install JPype
 
 (see the relevant `documentation <http://pypi.python.org/pypi/setuptools>`_)
 
-Finally, to install **xstats.MINE** itself please follow those steps:
+Finally, to install **xstats.MINE** for both Python and Jython please follow those steps:
 
 - Download the latest version of the library from http://github/ajmazurie/xstats.MINE/downloads
 - Unzip the downloaded file, and ``cd`` in the resulting directory
 - Run ``python setup.py install``
 
-Note that **xstats.MINE** has been tested with the version 1.0.1b of **MINE.jar**; previous versions would fail.
-
-Examples
---------
+Examples of use
+---------------
 
 Example #1: MINE on a pair of scalars
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -95,11 +100,9 @@ will display the following (only the first lines are shown; lines are truncated)
 	time YCR098C {'MCN': 2.0, 'MAS': 0.0, ...}
 	time YEL050C {'MCN': 2.0, 'MAS': 0.0, ...}
 
-Note that this example replicates the one shown in the MINE documentation::
+Note that this example replicates the one shown in the MINE documentation (see http://www.exploredata.net/Usage-instructions/Parameters)::
 
 	java -jar MINE.jar Spellman.csv 0 cv=0.7
-
-(see http://www.exploredata.net/Usage-instructions/Parameters)
 
 Licensing
 ---------
