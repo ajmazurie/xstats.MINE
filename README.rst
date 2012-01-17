@@ -16,16 +16,22 @@ A complete description of MINE and examples of use can be found in the following
 
 **Contact** Aurelien Mazurie <ajmazurie@oenone.net>
 
-**Keywords** Python, MINE, statistics
+**Keywords** MINE, Statistics, Python, Jython, JPype
 
 Installation
 ------------
+
+For use with Jython
+~~~~~~~~~~~~~~~~~~~
 
 If you plan to use **xstats.MINE** with the Jython interpreter you need to ensure the **MINE.jar** file (which you can retrieve at http://www.exploredata.net/Downloads/MINE-Application) is visible from Jython. For example, ::
 
 	jython -Dpython.path=MINE.jar my_script.py
 
 will execute your script **my_script.py** with Jython while loading the **MINE.jar** file located in the current directory.
+
+For use with Python
+~~~~~~~~~~~~~~~~~~~
 
 If you plan to use **xstats.MINE** with the Python interpreter you need to install the JPype library first. An easy way to do so, if you have **setuptools** installed, is to type ::
 
@@ -94,3 +100,10 @@ Note that this example replicates the one shown in the MINE documentation::
 	java -jar MINE.jar Spellman.csv 0 cv=0.7
 
 (see http://www.exploredata.net/Usage-instructions/Parameters)
+
+Licensing
+---------
+
+``xstats.MINE`` is released under a `MIT/X11 license <http://en.wikipedia.org/wiki/MIT_License>`_.
+
+``MINE.jar`` is released under a `Creative Commons Attribution-NonCommercial-NoDerivs 3.0 Unported <http://creativecommons.org/licenses/by-nc-nd/3.0/>`_ license by its authors.
