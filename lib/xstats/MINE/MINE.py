@@ -1,5 +1,5 @@
 
-__MINE_VERSION = "1.0.1d" # last version or MINE.jar against which xstats.MINE has been tested
+tested_MINE_version = "1.0.1d" # last version or MINE.jar against which xstats.MINE has been tested
 
 from . import python_implementation
 import sys, os, csv, tempfile
@@ -24,9 +24,8 @@ if (is_jython):
 		import data.VarPairData as VarPairData
 		import analysis.VarPairQueue as VarPairQueue
 
-	except:
-		print >>sys.stderr, "ERROR: unable to load MINE.jar classes"
-		sys.exit(1)
+	except Exception, e:
+		raise Exception("Unable to load MINE.jar classes (%s)" % e)
 
 	# hook for stdout
 	class null_output_stream (java.io.OutputStream):
@@ -57,28 +56,25 @@ else:
 		VarPairData = jpype.JClass("data.VarPairData")
 		VarPairQueue = jpype.JClass("analysis.VarPairQueue")
 
-	except:
-		print >>sys.stderr, "ERROR: unable to load MINE.jar classes"
-		sys.exit(1)
+	except jpype.JavaException, e:
+		raise Exception("Unable to load MINE.jar classes (%s)" % e.message())
 
 	# test the MINE.jar version
 	from pkg_resources import parse_version
 
 	try:
-		mine_version = Analyze.versionDescription().split(' ')[-1]
+		current_MINE_version = Analyze.versionDescription().split(' ')[-1]
 	except:
-		print >>sys.stderr, "ERROR: unable to determine the MINE.jar version"
-		sys.exit(1)
+		raise Exception("Unable to determine the MINE.jar version")
 
-	mine_version_ = parse_version(mine_version)
-	tested_version_ = parse_version(__MINE_VERSION)
+	current_MINE_version_ = parse_version(current_MINE_version)
+	tested_MINE_version_ = parse_version(tested_MINE_version)
 
-	if (mine_version_ < tested_version_):
-		print >>sys.stderr, "ERROR: xstats.MINE requires MINE.jar version %s or above (current version is %s)" % (__MINE_VERSION, mine_version)
-		sys.exit(1)
+	if (current_MINE_version_ < tested_MINE_version_):
+		raise Exception("xstats.MINE requires MINE.jar version %s or above (current version is %s)" % (tested_MINE_version, current_MINE_version))
 
-	if (mine_version_ > tested_version_):
-		print >>sys.stderr, "WARNING: xstats.MINE has not been tested on MINE.jar version %s" % mine_version
+	if (current_MINE_version_ > tested_MINE_version_):
+		print >>sys.stderr, "WARNING: xstats.MINE has not been tested on MINE.jar version %s" % current_MINE_version
 
 	# hook for stdout
 	_null_output_stream = jpype.JClass("org.apache.commons.io.output.NullOutputStream")()
