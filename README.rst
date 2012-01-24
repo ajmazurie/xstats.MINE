@@ -23,21 +23,18 @@ Installation
 
 Please follow those steps to ensure a proper installation of ``xstats.MINE``; note that step 3 can be skipped if you only intent to use ``xstats.MINE`` with Jython.
 
-1. Retrieval of MINE.jar
+1. Installation of MINE.jar
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The file **MINE.jar**, which you can retrieve at http://www.exploredata.net/Downloads/MINE-Application must be present in your computer. It is advised to place the file in a stable location; e.g., a directory on your computer dedicated to Java `.jar files <http://en.wikipedia.org/wiki/JAR_(file_format)>`_.
-
-Please note that this version of ``xstats.MINE`` is compatible with ``MINE.jar`` version 1.0.1b through 1.0.1d.
-
-2. Installation of MINE.jar
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The file **MINE.jar**, which you can retrieve at http://www.exploredata.net/Downloads/MINE-Application must be downloaded in your computer. It is advised to place this file in a stable location; e.g., a directory on your computer dedicated to Java `.jar files <http://en.wikipedia.org/wiki/JAR_(file_format)>`_.
 
 Once downloaded, **MINE.jar** must be made visible from the Java interpreter that lies behind Jython and JPype. It typically means adding the path to this file (wherever you placed it) to the ``CLASSPATH`` environment variable. If you are not familiar with the concept of environment variable, a quick introduction is available `here <http://docs.oracle.com/javase/tutorial/essential/environment/paths.html>`_.
 
 Depending of if you are under Windows or a flavor of Unix the technique to modify the ``CLASSPATH`` slightly differs. A good tutorial is available `here <http://docs.oracle.com/javase/tutorial/essential/environment/paths.html>`_; simply replaces references to ``PATH`` by references to ``CLASSPATH``.
 
-3. Installation of JPype
+Please note that this version of ``xstats.MINE`` is compatible with ``MINE.jar`` version 1.0.1b through 1.0.1d.
+
+2. Installation of JPype
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you plan to use ``xstats.MINE`` with Python you need to have JPype installed first. An easy way to do so, if you have **setuptools** installed, is to type ::
@@ -46,7 +43,9 @@ If you plan to use ``xstats.MINE`` with Python you need to have JPype installed 
 
 (see the relevant `documentation <http://pypi.python.org/pypi/setuptools>`_)
 
-4. Installation of xstats.MINE
+You will also need to download the **commons-io-X.X.jar** file from http://commons.apache.org/io/; X.X is the version of the Commons IO library (2.1 at the time of writing). This file must be declared in your ``CLASSPATH`` the same way you did for **MINE.jar**; see instructions in Step 1.
+
+3. Installation of xstats.MINE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Finally, to install ``xstats.MINE`` for both Python and Jython please follow those steps:
@@ -55,7 +54,7 @@ Finally, to install ``xstats.MINE`` for both Python and Jython please follow tho
 - Unzip the downloaded file, and ``cd`` in the resulting directory
 - Run ``python setup.py install``
 
-Note that updating ``xstats.MINE`` to a more recent version will proceed exactly the same; just repeat step 4.
+To update ``xstats.MINE`` with newer versions just repeat Step 3.
 
 Examples of use
 ---------------

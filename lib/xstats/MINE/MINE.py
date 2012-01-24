@@ -77,7 +77,11 @@ else:
 		print >>sys.stderr, "WARNING: xstats.MINE has not been tested on MINE.jar version %s" % current_MINE_version
 
 	# hook for stdout
-	_null_output_stream = jpype.JClass("org.apache.commons.io.output.NullOutputStream")()
+	try:
+		_null_output_stream = jpype.JClass("org.apache.commons.io.output.NullOutputStream")()
+
+	except jpype.JavaException, e:
+		raise EXception("Unable to load commons-io.jar classes (%s)" % e.message())
 
 # we need to set up hooks for the standard output, as MINE
 # will send text to it even when no warning or error occurs
