@@ -66,8 +66,8 @@ elif (environment == "PYTHON"):
 				if (os.path.exists(JAVA_HOME + fn)):
 					JVM = JAVA_HOME + fn
 
-		if (JVM is None):
-			raise Exception("Unable to find a Java runtime to use; JAVA_HOME appears to be set to an incorrect location (%s)" % JAVA_HOME)
+	if (JVM is None) or (not os.path.exists(JVM)):
+		raise Exception("Unable to find a Java runtime to use; JAVA_HOME appears to be set to an incorrect location (%s)" % JAVA_HOME)
 
 	try:
 		jpype.startJVM(JVM, *JVM_options)
