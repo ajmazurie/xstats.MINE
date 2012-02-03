@@ -1,31 +1,41 @@
 
-tested_MINE_version = "1.0.1d" # last version or MINE.jar against which xstats.MINE has been tested
-
-from . import python_implementation
 import sys, os, csv, tempfile
 
-is_jython = (python_implementation() == "JYTHON")
+MINE_version = "1.0.1d" # last version or MINE.jar against which xstats.MINE has been tested
+MINE_modules = (
+	("AllPairsAnalysisStyle", "main.styles.AllPairsAnalysisStyle"),
+	("Analysis", "analysis.Analysis"),
+	("AnalysisParameters", "analysis.AnalysisParameters"),
+	("Analyze", "main.Analyze"),
+	("ConsecutivePairsAnalysisStyle", "main.styles.ConsecutivePairsAnalysisStyle"),
+	("Dataset", "data.Dataset"),
+	("MasterVariableAnalysisStyle", "main.styles.MasterVariableAnalysisStyle"),
+	("MineParameters", "mine.core.MineParameters"),
+	("Result", "analysis.results.BriefResult"),
+	("VarPairData", "data.VarPairData"),
+	("VarPairQueue", "analysis.VarPairQueue")
+)
+
+# determine the environment
+try:
+	import java
+	environment = "JYTHON"
+except:
+	try:
+		import jpype
+		environment = "PYTHON"
+	except:
+		raise Exception("JPype library not found")
 
 # this library run under Jython
-if (is_jython):
-	import java
-
+if (environment == "JYTHON"):
 	# access to MINE packages
-	try:
-		import main.styles.AllPairsAnalysisStyle as AllPairsAnalysisStyle
-		import analysis.Analysis as Analysis
-		import analysis.AnalysisParameters as AnalysisParameters
-		import main.Analyze as Analyze
-		import main.styles.ConsecutivePairsAnalysisStyle as ConsecutivePairsAnalysisStyle
-		import data.Dataset as Dataset
-		import main.styles.MasterVariableAnalysisStyle as MasterVariableAnalysisStyle
-		import mine.core.MineParameters as MineParameters
-		import analysis.results.BriefResult as Result
-		import data.VarPairData as VarPairData
-		import analysis.VarPairQueue as VarPairQueue
+	for (module_alias, module_name) in MINE_modules:
+		try:
+			globals()[module_alias] = __import__(module_name, fromlist = [module_alias])
 
-	except Exception, e:
-		raise Exception("Unable to load MINE.jar classes (%s)" % e)
+		except ImportError, e:
+			raise Exception("Unable to load MINE.jar class %s (%s)" % (module_name, e))
 
 	# hook for stdout
 	class null_output_stream (java.io.OutputStream):
@@ -33,48 +43,64 @@ if (is_jython):
 			pass
 	_null_output_stream = null_output_stream()
 
+	environment = "JYTHON"
+
 # this library run under Python
-else:
-	import jpype
-	jpype.startJVM(
-		jpype.getDefaultJVMPath(),
-		"-Djava.class.path=" + os.environ.get("CLASSPATH", os.getcwd())
-	)
+elif (environment == "PYTHON"):
+	# launch the Java virtual machine
+	JVM = jpype.getDefaultJVMPath()
+	JVM_options = ["-Djava.class.path=" + os.environ.get("CLASSPATH", os.getcwd())]
+
+	if (JVM is None) or (not os.path.exists(JVM)):
+		JAVA_HOME = os.getenv("JAVA_HOME")
+
+		if (JAVA_HOME is None):
+			raise Exception("Unable to find a Java runtime to use; please set your JAVA_HOME to the correct location")
+
+		# attempt to salvage JVM when under Windows; see neo4j._backend code
+		if (sys.platform == "win32"):
+			if (os.path.exists(JAVA_HOME + "/bin/javac.exe")):
+				JAVA_HOME += "/jre"
+
+			for fn in ("/bin/client/jvm.dll", "/bin/server/jvm.dll"):
+				if (os.path.exists(JAVA_HOME + fn)):
+					JVM = JAVA_HOME + fn
+
+		if (JVM is None):
+			raise Exception("Unable to find a Java runtime to use; JAVA_HOME appears to be set to an incorrect location (%s)" % JAVA_HOME)
+
+	try:
+		jpype.startJVM(JVM, *JVM_options)
+
+	except Exception, e:
+		raise Exception("Unable to start the JVM (%s)" % e)
+
 	java = jpype.java
 
 	# access to MINE packages
-	try:
-		AllPairsAnalysisStyle = jpype.JClass("main.styles.AllPairsAnalysisStyle")
-		Analysis = jpype.JClass("analysis.Analysis")
-		AnalysisParameters = jpype.JClass("analysis.AnalysisParameters")
-		Analyze = jpype.JClass("main.Analyze")
-		ConsecutivePairsAnalysisStyle = jpype.JClass("main.styles.ConsecutivePairsAnalysisStyle")
-		Dataset = jpype.JClass("data.Dataset")
-		MasterVariableAnalysisStyle = jpype.JClass("main.styles.MasterVariableAnalysisStyle")
-		MineParameters = jpype.JClass("mine.core.MineParameters")
-		Result = jpype.JClass("analysis.results.BriefResult")
-		VarPairData = jpype.JClass("data.VarPairData")
-		VarPairQueue = jpype.JClass("analysis.VarPairQueue")
+	for (module_alias, module_name) in MINE_modules:
+		try:
+			globals()[module_alias] = jpype.JClass(module_name)
 
-	except jpype.JavaException, e:
-		raise Exception("Unable to load MINE.jar classes (%s)" % e.message())
+		except jpype.JavaException, e:
+			raise Exception("Unable to load MINE.jar class %s (%s)" % (module_name, e.message()))
 
 	# test the MINE.jar version
-	from pkg_resources import parse_version
-
 	try:
-		current_MINE_version = Analyze.versionDescription().split(' ')[-1]
+		from pkg_resources import parse_version
+		MINE_current_version = Analyze.versionDescription().split(' ')[-1]
+
+		MINE_current_version_ = parse_version(MINE_current_version)
+		MINE_version_ = parse_version(MINE_version)
+
 	except:
 		raise Exception("Unable to determine the MINE.jar version")
 
-	current_MINE_version_ = parse_version(current_MINE_version)
-	tested_MINE_version_ = parse_version(tested_MINE_version)
+	if (MINE_current_version_ < MINE_version_):
+		raise Exception("xstats.MINE requires MINE.jar version %s or above (current version is %s)" % (MINE_version, MINE_current_version))
 
-	if (current_MINE_version_ < tested_MINE_version_):
-		raise Exception("xstats.MINE requires MINE.jar version %s or above (current version is %s)" % (tested_MINE_version, current_MINE_version))
-
-	if (current_MINE_version_ > tested_MINE_version_):
-		print >>sys.stderr, "WARNING: xstats.MINE has not been tested on MINE.jar version %s" % current_MINE_version
+	if (MINE_current_version_ > MINE_version_):
+		print >>sys.stderr, "WARNING: xstats.MINE has not been tested on MINE.jar version %s" % MINE_current_version
 
 	# hook for stdout
 	try:
@@ -82,6 +108,8 @@ else:
 
 	except jpype.JavaException, e:
 		raise EXception("Unable to load commons-io.jar classes (%s)" % e.message())
+
+	environment = "PYTHON"
 
 # we need to set up hooks for the standard output, as MINE
 # will send text to it even when no warning or error occurs
@@ -132,7 +160,7 @@ def analyze_pair (x, y, exp = 0.6, c = 15, missing_value = None):
 	x = [NaN if (item == missing_value) else item for item in x]
 	y = [NaN if (item == missing_value) else item for item in y]
 
-	if (not is_jython):
+	if (environment == "PYTHON"):
 		x = jpype.JArray(jpype.JFloat, 1)(x)
 		y = jpype.JArray(jpype.JFloat, 1)(y)
 

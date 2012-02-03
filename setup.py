@@ -9,7 +9,7 @@ except ImportError:
 
 setup(
 	name = "xstats.MINE",
-	version = "0.1",
+	version = open("VERSION.txt").read().strip(),
 	description = "Python wrapper for the MINE statistical library",
 	long_description = open("README.rst").read(),
 	url = "http://github.com/ajmazurie/xstats.MINE",
